@@ -1,9 +1,11 @@
 #include <glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <stdio.h>
 #include <io.h>
 #include <fcntl.h>
+#include "FileReader.h"
+
+
 
 int main(int argc, char *argv[])
 {
@@ -44,11 +46,49 @@ int main(int argc, char *argv[])
 	// initial opengl
 	glewInit();
 
-	// test functions
-	GLuint vertexBuffer;
-	glGenBuffers(1, &vertexBuffer);
+	// Create Vertex Array Object
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
 
-	printf("%u\n", vertexBuffer);
+	// Create a Vertex Buffer Object and copy the vertex data to it
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+
+	GLfloat vertices[] = {
+		0.0f, 0.5f,
+		0.5f, -0.5f,
+		-0.5f, -0.5f
+	};
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// Create and compile the vertex shader
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	const GLchar* vertexSource = FileReader::Read("Shaders/vertexshader.vertex");
+	glShaderSource(vertexShader, 1, &vertexSource, NULL);
+	glCompileShader(vertexShader);
+
+	// Create and compile the fragment shader
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	const GLchar* fragmentSource = FileReader::Read("Shaders/fragmentShader.fragment");
+	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+	glCompileShader(fragmentShader);
+
+	// Link the vertex and fragment shader into a shader program
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glBindFragDataLocation(shaderProgram, 0, "outColor");
+	glLinkProgram(shaderProgram);
+	glUseProgram(shaderProgram);
+
+	// Specify the layout of the vertex data
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
 
 	//Then comes the most important part of the program, the event loop:
 	SDL_Event windowEvent;
@@ -58,10 +98,23 @@ int main(int argc, char *argv[])
 		{
 			if (windowEvent.type == SDL_QUIT) break;
 		}
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
+		// Draw a triangle from the 3 vertices
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 		SDL_GL_SwapWindow(window);
 	}
 	SDL_GL_DeleteContext(context);
+
+
+	glDeleteProgram(shaderProgram);
+	glDeleteShader(fragmentShader);
+	glDeleteShader(vertexShader);
+
+	glDeleteBuffers(1, &vbo);
+
+	glDeleteVertexArrays(1, &vao);
 
 	SDL_Quit();
 	return 0;
