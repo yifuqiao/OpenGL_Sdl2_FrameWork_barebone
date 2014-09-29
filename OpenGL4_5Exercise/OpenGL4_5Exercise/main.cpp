@@ -4,6 +4,7 @@
 #include <io.h>
 #include <fcntl.h>
 #include "FileReader.h"
+#include "Headers.h"
 
 
 
@@ -51,14 +52,42 @@ int main(int argc, char *argv[])
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
+	/*GLuint elements[] = {
+		0, 1, 2
+	};*/
+	GLuint elements[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	// order the existing vertices and reuse them
+	GLuint ebo;
+	glGenBuffers(1, &ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+		sizeof(elements), elements, GL_STATIC_DRAW);
+
 	// Create a Vertex Buffer Object and copy the vertex data to it
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 
-	GLfloat vertices[] = {
+	/*GLfloat vertices[] = {
 		0.0f, 0.5f,
 		0.5f, -0.5f,
 		-0.5f, -0.5f
+	};*/
+
+	/*GLfloat vertices[] = {
+		0.0f, 0.5f, 1.0f, 0.0f, 0.0f, // Vertex 1: Red
+		0.5f, -0.5f, 0.0f, 1.0f, 0.0f, // Vertex 2: Green
+		-0.5f, -0.5f, 0.0f, 0.0f, 1.0f  // Vertex 3: Blue
+	};*/
+
+	float vertices[] = {
+		-0.5f, 0.5f, 1.0f, 0.0f, 0.0f, // Top-left
+		0.5f, 0.5f, 0.0f, 1.0f, 0.0f, // Top-right
+		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // Bottom-right
+		-0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
 	};
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -85,10 +114,22 @@ int main(int argc, char *argv[])
 	glUseProgram(shaderProgram);
 
 	// Specify the layout of the vertex data
-	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	/*GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	*/
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE,
+		5 * sizeof(GLfloat), 0);
 
+	GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+	glEnableVertexAttribArray(colAttrib);
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE,
+		5 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
+
+//	GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+//	glUniform3f(uniColor, 1.0f, 0.0f, 0.0f);
 
 	//Then comes the most important part of the program, the event loop:
 	SDL_Event windowEvent;
@@ -101,8 +142,14 @@ int main(int argc, char *argv[])
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		// to do : need to get a batter accurate time implementation
+		float time = (float)clock() / (float)CLOCKS_PER_SEC;
+		
+		//glUniform3f(uniColor, (sin(time * 4.0f) + 1.0f) / 2.0f, 0.0f, 0.0f);
+
+
 		// Draw a triangle from the 3 vertices
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 		SDL_GL_SwapWindow(window);
 	}
 	SDL_GL_DeleteContext(context);
